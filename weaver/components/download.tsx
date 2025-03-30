@@ -24,32 +24,42 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
     return nameWithoutExt.replace(/[\[\]()]/g, '').trim();
   };
 
-  const [tracks, setTracks] = useState([
-    { 
-      id: "vocals", 
-      label: `Vocals - ${cleanFileName(separatedFiles.original_filename)}`, 
-      icon: <Mic className="h-4 w-4 text-blue-400" />, 
-      src: separatedFiles.vocals 
-    },
-    { 
-      id: "instrumental", 
-      label: `Instrumental - ${cleanFileName(separatedFiles.original_filename)}`, 
-      icon: <Music className="h-4 w-4 text-green-400" />, 
-      src: separatedFiles.instrumental 
-    },
-    { 
-      id: "drums", 
-      label: `Drums - ${cleanFileName(separatedFiles.original_filename)}`, 
-      icon: <Music className="h-4 w-4 text-yellow-400" />, 
-      src: separatedFiles.drums 
-    },
-    { 
-      id: "bass", 
-      label: `Bass - ${cleanFileName(separatedFiles.original_filename)}`, 
-      icon: <Music className="h-4 w-4 text-red-400" />, 
-      src: separatedFiles.bass 
-    },
-  ]); 
+  const [tracks, setTracks] = useState(() => {
+    const availableTracks = [];
+    if (separatedFiles.vocals) {
+      availableTracks.push({ 
+        id: "vocals", 
+        label: `Vocals - ${cleanFileName(separatedFiles.original_filename)}`, 
+        icon: <Mic className="h-4 w-4 text-blue-400" />, 
+        src: separatedFiles.vocals 
+      });
+    }
+    if (separatedFiles.instrumental) {
+      availableTracks.push({ 
+        id: "instrumental", 
+        label: `Instrumental - ${cleanFileName(separatedFiles.original_filename)}`, 
+        icon: <Music className="h-4 w-4 text-green-400" />, 
+        src: separatedFiles.instrumental 
+      });
+    }
+    if (separatedFiles.drums) {
+      availableTracks.push({ 
+        id: "drums", 
+        label: `Drums - ${cleanFileName(separatedFiles.original_filename)}`, 
+        icon: <Music className="h-4 w-4 text-yellow-400" />, 
+        src: separatedFiles.drums 
+      });
+    }
+    if (separatedFiles.bass) {
+      availableTracks.push({ 
+        id: "bass", 
+        label: `Bass - ${cleanFileName(separatedFiles.original_filename)}`, 
+        icon: <Music className="h-4 w-4 text-red-400" />, 
+        src: separatedFiles.bass 
+      });
+    }
+    return availableTracks;
+  }); 
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     e.dataTransfer.setData("trackIndex", index.toString());

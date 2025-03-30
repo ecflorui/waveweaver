@@ -262,16 +262,21 @@ app.post('/api/separate', upload.single('audioFile'), async (req, res) => {
 
     // Return the separation ID and file paths
     console.log('Sending response with stem files:', stemFiles);
-    res.json({
+    const response = {
       success: true,
       status: 'completed',
       id: separationId,
-      vocals: stemFiles.vocals,
-      instrumental: stemFiles.instrumental,
-      drums: stemFiles.drums,
-      bass: stemFiles.bass,
       original_filename: fileName
+    };
+
+    // Only include stems that were selected
+    selectedStems.forEach(stem => {
+      if (stemFiles[stem]) {
+        response[stem] = stemFiles[stem];
+      }
     });
+
+    res.json(response);
 
   } catch (error) {
     console.error('Error:', error);
