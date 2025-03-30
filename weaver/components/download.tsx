@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, Music, Download, Plus } from "lucide-react";
+import { Mic, Music, Download, Plus, Check, ArrowRight } from "lucide-react";
+import Link from 'next/link';
 
 interface SeparatedFiles {
   vocals: string;
@@ -61,6 +62,8 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
     return availableTracks;
   }); 
 
+  const [addedTracks, setAddedTracks] = useState<Set<string>>(new Set());
+
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     e.dataTransfer.setData("trackIndex", index.toString());
   };
@@ -77,13 +80,12 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
 
   const handleAddToMixer = async (track: { id: string; src: string; label: string }) => {
     try {
-      console.log('Track data:', track); // Log the entire track object
+      console.log('Track data:', track);
       
       if (!track.src) {
         throw new Error(`No source path found for track: ${track.id}`);
       }
 
-      // Ensure the track path is properly formatted
       const trackPath = track.src.startsWith('/') ? track.src : `/${track.src}`;
       
       console.log('Adding track to mixer:', { 
@@ -110,8 +112,9 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
         throw new Error(data.error || 'Failed to add track to mixer');
       }
 
-      console.log('Track added to mixer successfully:', data);
-      alert('Track added to mixer successfully!');
+      // Add track to addedTracks set
+      setAddedTracks(prev => new Set(prev).add(track.id));
+
     } catch (error: any) {
       console.error('Error adding track to mixer:', error);
       alert(`Failed to add track to mixer: ${error.message}`);
@@ -148,13 +151,25 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
               <Download className="mr-2 h-4 w-4" />
               Download
             </Button>
-            <Button 
-              className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => handleAddToMixer(track)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add to Mixer
-            </Button>
+            {addedTracks.has(track.id) ? (
+              <Button 
+                className="w-1/2 bg-green-600 hover:bg-green-700 text-white"
+                asChild
+              >
+                <Link href="/mixer">
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  Go to Mixer
+                </Link>
+              </Button>
+            ) : (
+              <Button 
+                className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => handleAddToMixer(track)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add to Mixer
+              </Button>
+            )}
           </CardFooter>
         </Card>
       ))}

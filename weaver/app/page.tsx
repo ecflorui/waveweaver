@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -8,34 +8,39 @@ import { Music2, Mic, Music } from "lucide-react"
 import { AudioSeparator } from "@/components/audio-separator"
 import DraggableAudioTracks from "@/components/download"
 import Link from 'next/link'
-
-interface SeparatedFiles {
-  vocals: string | null;
-  instrumental: string | null;
-  drums: string | null;
-  bass: string | null;
-  original_filename: string | null;
-}
+import { useProcessing } from "@/contexts/processing-context"
 
 export default function Home() {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [separatedFiles, setSeparatedFiles] = useState<SeparatedFiles>({
-    vocals: null,
-    instrumental: null,
-    drums: null,
-    bass: null,
-    original_filename: null,
-  });
+  const { isProcessing, processingFile, separatedFiles, setSeparatedFiles } = useProcessing();
 
-  const handleProcessingStart = () => {
-    setIsProcessing(true);
-  };
+  // Load from localStorage on client-side only
+  useEffect(() => {
+    const saved = localStorage.getItem('separatedFiles');
+    if (saved) {
+      setSeparatedFiles(JSON.parse(saved));
+    }
+  }, [setSeparatedFiles]);
+
+  // Save to localStorage whenever separatedFiles changes
+  useEffect(() => {
+    localStorage.setItem('separatedFiles', JSON.stringify(separatedFiles));
+  }, [separatedFiles]);
 
   const handleProcessingComplete = (files?: { vocals: string; instrumental: string; drums: string; bass: string; original_filename: string }) => {
-    setIsProcessing(false);
     if (files) {
       setSeparatedFiles(files);
     }
+  };
+
+  const handleProcessAnother = () => {
+    setSeparatedFiles({
+      vocals: null,
+      instrumental: null,
+      drums: null,
+      bass: null,
+      original_filename: null,
+    });
+    localStorage.removeItem('separatedFiles');
   };
 
   return (
@@ -70,6 +75,7 @@ export default function Home() {
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-medium text-gray-100">Processing Audio</h3>
                 <p className="text-sm text-gray-400">Separating vocals from instrumentals...</p>
+                <p className="text-xs text-gray-500">{processingFile}</p>
               </div>
               <div className="flex space-x-2">
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
@@ -85,7 +91,7 @@ export default function Home() {
               </div>
               <Button 
                 variant="outline" 
-                onClick={() => setSeparatedFiles({ vocals: null, instrumental: null, drums: null, bass: null, original_filename: null })}
+                onClick={handleProcessAnother}
                 className="bg-gray-700 hover:bg-gray-600 text-gray-100 border-gray-600"
               >
                 Process Another File
@@ -94,7 +100,6 @@ export default function Home() {
           ) : (
             <div className="py-4">
               <AudioSeparator
-                onProcessingStart={handleProcessingStart}
                 onProcessingComplete={handleProcessingComplete}
               />
             </div>
