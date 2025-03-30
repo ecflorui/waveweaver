@@ -22,7 +22,7 @@ const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
   database: 'waveweaver',
-  password: 'Omni5lash!', // Default password for postgres user
+  password: 'Snap12509', // Default password for postgres user
   port: 5432,
 });
 
@@ -288,17 +288,13 @@ app.post('/api/separate', upload.single('audioFile'), async (req, res) => {
   }
 });
 
-// Endpoint for getting all mixer tracks
+// Endpoint for getting mixer tracks
 app.get('/api/mixer-tracks', async (req, res) => {
   try {
     const client = await pool.connect();
     try {
       const result = await client.query('SELECT * FROM mixer_tracks ORDER BY created_at DESC');
-      console.log('Successfully fetched mixer tracks:', result.rows);
       res.json({ tracks: result.rows });
-    } catch (dbError) {
-      console.error('Database error:', dbError);
-      res.status(500).json({ error: 'Database error while fetching mixer tracks' });
     } finally {
       client.release();
     }
@@ -342,11 +338,13 @@ app.delete('/api/mixer-tracks/:id', async (req, res) => {
 });
 
 // Initialize database and start server
-initializeDatabase().then(() => {
-  app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
+initializeDatabase()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  })
+  .catch(error => {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
   });
-}).catch(err => {
-  console.error('Failed to initialize database:', err);
-  process.exit(1);
-});

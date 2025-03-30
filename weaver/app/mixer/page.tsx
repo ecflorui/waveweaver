@@ -1,8 +1,7 @@
 'use client'
 
-import MixerTracks from "@/components/mixer";
+import AudioMixer from "@/components/audio-mixer";
 import MixerHeader from "@/components/mixer-header";
-import MixerBlock from "@/components/mixer-block";
 import { useProcessing } from "@/contexts/processing-context";
 import { Music2 } from "lucide-react";
 
@@ -33,10 +32,7 @@ export default function MixerPage() {
             </div>
           </div>
         ) : (
-          <>
-            <MixerBlock />
-            <MixerTracks />
-          </>
+          <AudioMixer />
         )}
       </div>
     </main>
