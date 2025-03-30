@@ -82,21 +82,27 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
     <div className="space-y-4">
       <div
         className={`border-2 border-dashed rounded-lg p-8 text-center ${
-          isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+          isDragging 
+            ? "border-blue-400 bg-blue-400/10" 
+            : "border-gray-600 bg-gray-800/50"
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         <div className="flex flex-col items-center justify-center space-y-4">
-          <div className="rounded-full bg-primary/10 p-3">
-            <FileAudio className="h-8 w-8 text-primary" />
+          <div className="rounded-full bg-blue-400/10 p-3">
+            <FileAudio className="h-8 w-8 text-blue-400" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-medium">Drag & drop your audio/video file</h3>
-            <p className="text-sm text-muted-foreground">Supports MP3, MP4, WAV, and more formats</p>
+            <h3 className="text-lg font-medium text-gray-100">Drag & drop your audio/video file</h3>
+            <p className="text-sm text-gray-400">Supports MP3, MP4, WAV, and more formats</p>
           </div>
-          <Button onClick={handleUploadClick} variant="outline" className="mt-2">
+          <Button 
+            onClick={handleUploadClick} 
+            variant="outline" 
+            className="bg-gray-800 hover:bg-gray-700 text-gray-100 border-gray-700"
+          >
             <Upload className="mr-2 h-4 w-4" />
             Select File
           </Button>
@@ -106,16 +112,16 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
 
       {file && (
         <div className="flex flex-col space-y-2">
-          <div className="flex items-center justify-between rounded-md border p-3">
+          <div className="flex items-center justify-between rounded-md border border-gray-700 bg-gray-800 p-3">
             <div className="flex items-center space-x-2">
-              <FileAudio className="h-5 w-5 text-primary" />
-              <span className="font-medium truncate max-w-[200px] md:max-w-[400px]">{file.name}</span>
+              <FileAudio className="h-5 w-5 text-blue-400" />
+              <span className="font-medium text-gray-100 truncate max-w-[200px] md:max-w-[400px]">{file.name}</span>
             </div>
-            <span className="text-xs text-muted-foreground">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+            <span className="text-xs text-gray-400">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
           </div>
           <Button 
             onClick={separateAudio} 
-            className="w-full"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           >
             Separate Vocals & Instrumental
           </Button>

@@ -14,8 +14,8 @@ interface DraggableAudioTracksProps {
 
 export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioTracksProps) {
   const [tracks, setTracks] = useState([
-    { id: "vocals", label: "Vocals Track", icon: <Mic className="h-4 w-4" />, src: separatedFiles.vocals },
-    { id: "instrumental", label: "Instrumental Track", icon: <Music className="h-4 w-4" />, src: separatedFiles.instrumental },
+    { id: "vocals", label: "Vocals Track", icon: <Mic className="h-4 w-4 text-blue-400" />, src: separatedFiles.vocals },
+    { id: "instrumental", label: "Instrumental Track", icon: <Music className="h-4 w-4 text-green-400" />, src: separatedFiles.instrumental },
   ]); 
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
@@ -70,25 +70,29 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
           onDragStart={(e) => handleDragStart(e, index)}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => handleDrop(e, index)}
-          className="cursor-grab hover:shadow-lg transition"
+          className="cursor-grab hover:shadow-lg transition bg-gray-800 border-gray-700"
         >
           <CardHeader className="pb-2 flex items-center gap-2">
             {track.icon}
-            <CardTitle className="text-base">{track.label}</CardTitle>
+            <CardTitle className="text-base text-gray-100">{track.label}</CardTitle>
           </CardHeader>
           <CardContent>
-            <audio controls src={`http://localhost:5001${track.src}`} className="w-full"></audio>
+            <audio 
+              controls 
+              src={`http://localhost:5001${track.src}`} 
+              className="w-full [&::-webkit-media-controls-panel]:bg-gray-700 [&::-webkit-media-controls-current-time-display]:text-gray-100 [&::-webkit-media-controls-time-remaining-display]:text-gray-100"
+            ></audio>
           </CardContent>
           <CardFooter className="flex gap-2">
             <Button 
-              className="w-1/2" 
+              className="w-1/2 bg-gray-700 hover:bg-gray-600 text-gray-100 border-gray-600" 
               onClick={() => window.open(`http://localhost:5001${track.src}`, '_blank')}
             >
               <Download className="mr-2 h-4 w-4" />
               Download
             </Button>
             <Button 
-              className="w-1/2 bg-blue-500 hover:bg-blue-600 text-white"
+              className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white"
               onClick={() => handleAddToMixer(track)}
             >
               <Plus className="mr-2 h-4 w-4" />

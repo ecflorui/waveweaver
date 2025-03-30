@@ -39,36 +39,40 @@ export default function MixerTracks() {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading mixer tracks...</div>;
+    return <div className="flex justify-center items-center h-64 text-gray-300">Loading mixer tracks...</div>;
   }
 
   if (error) {
-    return <div className="flex justify-center items-center h-64 text-red-500">Error: {error}</div>;
+    return <div className="flex justify-center items-center h-64 text-red-400">Error: {error}</div>;
   }
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="flex flex-col gap-4 w-full max-w-2xl">
       {tracks.map((track) => (
         <Card
           key={track.id}
-          className="hover:shadow-lg transition"
+          className="hover:shadow-lg transition bg-gray-800 border-gray-700"
         >
           <CardHeader className="pb-2 flex items-center gap-2">
             {track.track_id === 'vocals' ? (
-              <Mic className="h-4 w-4" />
+              <Mic className="h-4 w-4 text-blue-400" />
             ) : (
-              <Music className="h-4 w-4" />
+              <Music className="h-4 w-4 text-green-400" />
             )}
-            <CardTitle className="text-base">
+            <CardTitle className="text-base text-gray-100">
               {track.track_id === 'vocals' ? 'Vocals Track' : 'Instrumental Track'}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <audio controls src={`http://localhost:5001${track.track_path}`} className="w-full"></audio>
+            <audio 
+              controls 
+              src={`http://localhost:5001${track.track_path}`} 
+              className="w-full [&::-webkit-media-controls-panel]:bg-gray-700 [&::-webkit-media-controls-current-time-display]:text-gray-100 [&::-webkit-media-controls-time-remaining-display]:text-gray-100"
+            ></audio>
           </CardContent>
           <CardFooter>
             <Button 
-              className="w-full" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
               onClick={() => window.open(`http://localhost:5001${track.track_path}`, '_blank')}
             >
               <Download className="mr-2 h-4 w-4" />
@@ -78,7 +82,7 @@ export default function MixerTracks() {
         </Card>
       ))}
       {tracks.length === 0 && (
-        <div className="text-center text-gray-500 py-8">
+        <div className="text-center text-gray-400 py-8">
           No tracks in the mixer yet. Add some tracks from the separation page!
         </div>
       )}
