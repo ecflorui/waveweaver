@@ -89,11 +89,6 @@ export function TrackRegion({
           ref={containerRef}
           className="relative flex-1 h-16 bg-gray-800/50 rounded-lg overflow-hidden group"
         >
-          {/* Background pattern for waveform effect */}
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full h-12 bg-gradient-to-b from-gray-700/20 to-gray-700/10" />
-          </div>
-
           {/* Time indicators */}
           <div className="absolute top-1 left-0 right-0 flex justify-between px-2 text-xs text-gray-400">
             <span>{formatTime(startTime)}</span>
@@ -111,7 +106,7 @@ export function TrackRegion({
 
           {/* Region */}
           <motion.div
-            className="absolute top-0 bottom-0 bg-blue-500/20 cursor-move group-hover:bg-blue-500/30 transition-colors"
+            className="absolute top-0 bottom-0 bg-blue-500/10 cursor-move group-hover:bg-blue-500/20 transition-colors"
             style={{
               left: startX,
               right: 0,
@@ -124,9 +119,9 @@ export function TrackRegion({
             onDragEnd={() => setIsMovingRegion(false)}
             onDrag={(_, info) => handleDrag(info, false, false)}
           >
-            {/* Start handle */}
+            {/* Start handle - wider and with hover effect */}
             <motion.div
-              className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 cursor-col-resize hover:bg-blue-400 transition-colors"
+              className="absolute left-0 top-0 bottom-0 w-6 cursor-col-resize hover:bg-blue-400/10 transition-colors"
               drag="x"
               dragMomentum={false}
               dragConstraints={containerRef}
@@ -135,8 +130,44 @@ export function TrackRegion({
               onDrag={(_, info) => handleDrag(info, true, false)}
             />
 
-            {/* End handle */}
+            {/* End handle - wider and with hover effect */}
             <motion.div
-              className="absolute right-0 top-0 bottom-0 w-1 bg-blue-500 cursor-col-resize hover:bg-blue-400 transition-colors"
+              className="absolute right-0 top-0 bottom-0 w-6 cursor-col-resize hover:bg-blue-400/10 transition-colors"
               drag="x"
-              dragM
+              dragMomentum={false}
+              dragConstraints={containerRef}
+              onDragStart={() => setIsDraggingEnd(true)}
+              onDragEnd={() => setIsDraggingEnd(false)}
+              onDrag={(_, info) => handleDrag(info, false, true)}
+            />
+          </motion.div>
+
+          {/* Current time indicator */}
+          <div className="absolute bottom-1 left-0 right-0 text-center">
+            <span className="text-xs text-gray-400 font-mono">
+              {formatTime(currentTime)}
+            </span>
+          </div>
+        </div>
+
+        {/* Volume slider aligned with region */}
+        <div className="w-24 flex items-center gap-2">
+          <Volume2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Slider
+            value={[volume * 100]}
+            min={0}
+            max={100}
+            onValueChange={(values: number[]) => onVolumeChange(values[0] / 100)}
+            className="flex-1"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+} 

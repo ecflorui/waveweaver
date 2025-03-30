@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Play, Pause, Repeat, FastForward, Rewind, Mic, Music, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, Repeat, FastForward, Rewind, Mic, Music, Volume2, VolumeX, Trash2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { TrackRegion } from "./track-region";
 
@@ -280,6 +280,10 @@ export default function AudioMixer() {
     }));
   };
 
+  const deleteTrack = (trackId: string) => {
+    // Implementation of deleteTrack function
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -310,7 +314,7 @@ export default function AudioMixer() {
             <div className="flex items-center gap-4">
               <Button
                 onClick={toggleMasterPlay}
-                className="bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full"
+                className="bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full flex-shrink-0"
               >
                 {masterPlay ? 
                   <Pause className="h-6 w-6" /> : 
@@ -408,33 +412,28 @@ export default function AudioMixer() {
                   >
                     <Repeat className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteTrack(track.id)}
+                    className="text-gray-400 hover:text-red-400 hover:bg-red-400/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <TrackRegion
-                  duration={track.audio.duration}
-                  currentTime={track.audio.currentTime}
-                  startTime={track.startTime}
-                  endTime={track.endTime}
-                  isPlaying={track.isPlaying}
-                  onRegionChange={(start, end) => setTrackRegion(track.id, start, end)}
-                />
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <Slider
-                      value={[track.volume * 100]}
-                      min={0}
-                      max={100}
-                      onValueChange={(values: number[]) => setTrackVolume(track.id, values[0] / 100)}
-                    />
-                  </div>
-                  <span className="text-sm text-gray-300 font-mono min-w-[80px] text-right">
-                    {formatTime(track.audio.currentTime)} / {formatTime(track.audio.duration)}
-                  </span>
-                </div>
-              </div>
+              <TrackRegion
+                duration={track.audio.duration}
+                currentTime={track.audio.currentTime}
+                startTime={track.startTime}
+                endTime={track.endTime}
+                isPlaying={track.isPlaying}
+                volume={track.volume}
+                onRegionChange={(start, end) => setTrackRegion(track.id, start, end)}
+                onVolumeChange={(volume) => setTrackVolume(track.id, volume)}
+              />
             </CardContent>
           </Card>
         ))}
