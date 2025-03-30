@@ -4,7 +4,7 @@ import Multitrack from "wavesurfer-multitrack";
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Mic, Music, SkipForward, SkipBack } from "lucide-react";
+import { Play, Pause, Mic, Music, SkipForward, SkipBack, Trash2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -41,6 +41,28 @@ const MultiTrackPlayer = () => {
   const [loopRegions, setLoopRegions] = useState<{ [key: string]: boolean }>({});
   const [activeRegion, setActiveRegion] = useState<any>(null);
   const regionsRef = useRef<any>(null);
+
+  const handleDeleteTrack = async (trackId: string) => {
+    if (!confirm('Are you sure you want to delete this track?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5001/api/mixer-tracks/${trackId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete track');
+      }
+
+      // Update the tracks list by removing the deleted track
+      setTracks(tracks.filter(track => track.id !== trackId));
+    } catch (error) {
+      console.error('Error deleting track:', error);
+      alert('Failed to delete track');
+    }
+  };
 
   // Random color generator for regions
   const random = (min: number, max: number) => Math.random() * (max - min) + min;
@@ -125,6 +147,7 @@ const MultiTrackPlayer = () => {
             fillParent: true,
             minPxPerSec: zoom,
             autoplay: false,
+            volume: 1,
           },
         };
       }),
@@ -156,9 +179,25 @@ const MultiTrackPlayer = () => {
     // Log when tracks are loaded
     instance.once('canplay', () => {
       console.log('All tracks are ready to play');
-      // Initialize track volumes to 1
-      tracks.forEach((_, index) => {
+      // Initialize track volumes to 1 and set default envelope points
+      tracks.forEach((track, index) => {
+        console.log(`Setting envelope points for track ${index + 1}:`, track.track_id);
         instance.setTrackVolume(index + 1, 1);
+        
+        // Set default envelope points at start and end
+        const endTime = track.endCue || 30; // Use end cue or default to 30 seconds
+        const points = [
+          { time: 0, volume: 1 },
+          { time: endTime, volume: 1 }
+        ];
+        
+        // For vocals track (index 0), ensure points are set
+        if (track.track_id === 'vocals') {
+          console.log('Setting envelope points for vocals track:', points);
+          instance.setEnvelopePoints(1, points);
+        } else {
+          instance.setEnvelopePoints(index + 1, points);
+        }
       });
 
       // Create start and end regions for each track
@@ -423,6 +462,14 @@ const MultiTrackPlayer = () => {
                       <Label htmlFor={`loop-${track.id}`} className="text-sm text-gray-400">
                         Loop Section
                       </Label>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteTrack(track.id)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                   <div className="flex gap-4">
