@@ -22,7 +22,7 @@ const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
   database: 'waveweaver',
-  password: 'Ramanlsm&1', // Default password for postgres user
+  password: 'Omni5lash!', // Default password for postgres user
   port: 5432,
 });
 
@@ -181,7 +181,8 @@ app.post('/api/separate', upload.single('audioFile'), async (req, res) => {
     res.json({
       id: separationId,
       vocals: vocalsPath,
-      instrumental: instrumentalPath
+      instrumental: instrumentalPath,
+      original_filename: fileName
     });
 
   } catch (error) {

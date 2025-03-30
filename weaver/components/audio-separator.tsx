@@ -8,7 +8,7 @@ import { Upload, FileAudio } from "lucide-react"
 
 interface AudioSeparatorProps {
   onProcessingStart: () => void
-  onProcessingComplete: (files?: { vocals: string, instrumental: string, originalFilename: string }) => void
+  onProcessingComplete: (files?: { vocals: string, instrumental: string, original_filename: string }) => void
 }
 
 export function AudioSeparator({ onProcessingStart, onProcessingComplete }: AudioSeparatorProps) {
@@ -50,11 +50,9 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
     onProcessingStart()
 
     try {
-      // Create a FormData object to send the file to the server
       const formData = new FormData()
       formData.append('audioFile', file)
 
-      // Send the file to the server for processing
       const response = await fetch('http://localhost:5001/api/separate', {
         method: 'POST',
         body: formData,
@@ -69,7 +67,7 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
       onProcessingComplete({
         vocals: data.vocals,
         instrumental: data.instrumental,
-        originalFilename: file.name
+        original_filename: data.original_filename
       })
 
     } catch (error) {
@@ -82,10 +80,10 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
   return (
     <div className="space-y-4">
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center ${
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
           isDragging 
             ? "border-blue-400 bg-blue-400/10" 
-            : "border-gray-600 bg-gray-800/50"
+            : "border-gray-600 hover:border-gray-500 bg-gray-800/50"
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -96,24 +94,30 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
             <FileAudio className="h-8 w-8 text-blue-400" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-medium text-gray-100">Drag & drop your audio/video file</h3>
+            <h3 className="text-lg font-medium text-gray-100">Drag & drop your audio file</h3>
             <p className="text-sm text-gray-400">Supports MP3, MP4, WAV, and more formats</p>
           </div>
           <Button 
             onClick={handleUploadClick} 
             variant="outline" 
-            className="bg-gray-800 hover:bg-gray-700 text-gray-100 border-gray-700"
+            className="bg-gray-700 hover:bg-gray-600 text-gray-100 border-gray-600"
           >
             <Upload className="mr-2 h-4 w-4" />
             Select File
           </Button>
-          <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="audio/*,video/*" className="hidden" />
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            accept="audio/*,video/*" 
+            className="hidden" 
+          />
         </div>
       </div>
 
       {file && (
         <div className="flex flex-col space-y-2">
-          <div className="flex items-center justify-between rounded-md border border-gray-700 bg-gray-800 p-3">
+          <div className="flex items-center justify-between rounded-md border border-gray-700 p-3 bg-gray-800/50">
             <div className="flex items-center space-x-2">
               <FileAudio className="h-5 w-5 text-blue-400" />
               <span className="font-medium text-gray-100 truncate max-w-[200px] md:max-w-[400px]">{file.name}</span>
