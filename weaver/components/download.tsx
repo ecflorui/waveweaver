@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, Music, Download } from "lucide-react";
+import { Mic, Music, Download, Plus } from "lucide-react";
 
 interface SeparatedFiles {
   vocals: string;
@@ -16,7 +16,8 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
   const [tracks, setTracks] = useState([
     { id: "vocals", label: "Vocals Track", icon: <Mic className="h-4 w-4" />, src: separatedFiles.vocals },
     { id: "instrumental", label: "Instrumental Track", icon: <Music className="h-4 w-4" />, src: separatedFiles.instrumental },
-  ]);
+  ]); 
+
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     e.dataTransfer.setData("trackIndex", index.toString());
@@ -50,13 +51,18 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
           <CardContent>
             <audio controls src={`http://localhost:5001${track.src}`} className="w-full"></audio>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex gap-2">
             <Button 
-              className="w-full" 
+              className="w-1/2" 
               onClick={() => window.open(`http://localhost:5001${track.src}`, '_blank')}
             >
               <Download className="mr-2 h-4 w-4" />
-              Download {track.label}
+              Download
+            </Button>
+            <Button 
+              className="w-1/2 bg-blue-500 hover:bg-blue-600 text-white">
+              <Plus className="mr-2 h-4 w-4" />
+              Add to Mixer
             </Button>
           </CardFooter>
         </Card>
