@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, Music, Download, Plus } from "lucide-react";
+import { Mic, Music, Download, Plus, Check, ArrowRight } from "lucide-react";
+import Link from 'next/link';
 
 interface SeparatedFiles {
   vocals: string;
   instrumental: string;
+  drums: string;
+  bass: string;
   original_filename: string;
 }
 
@@ -14,20 +17,52 @@ interface DraggableAudioTracksProps {
 }
 
 export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioTracksProps) {
-  const [tracks, setTracks] = useState([
-    { 
-      id: "vocals", 
-      label: `Vocals - ${separatedFiles.original_filename}`, 
-      icon: <Mic className="h-4 w-4 text-blue-400" />, 
-      src: separatedFiles.vocals 
-    },
-    { 
-      id: "instrumental", 
-      label: `No Vocals - ${separatedFiles.original_filename}`, 
-      icon: <Music className="h-4 w-4 text-green-400" />, 
-      src: separatedFiles.instrumental 
-    },
-  ]); 
+  // Function to clean up the filename
+  const cleanFileName = (filename: string) => {
+    // Remove file extension
+    const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+    // Remove any special characters and extra spaces
+    return nameWithoutExt.replace(/[\[\]()]/g, '').trim();
+  };
+
+  const [tracks, setTracks] = useState(() => {
+    const availableTracks = [];
+    if (separatedFiles.vocals) {
+      availableTracks.push({ 
+        id: "vocals", 
+        label: `Vocals - ${cleanFileName(separatedFiles.original_filename)}`, 
+        icon: <Mic className="h-4 w-4 text-blue-400" />, 
+        src: separatedFiles.vocals 
+      });
+    }
+    if (separatedFiles.instrumental) {
+      availableTracks.push({ 
+        id: "instrumental", 
+        label: `Instrumental - ${cleanFileName(separatedFiles.original_filename)}`, 
+        icon: <Music className="h-4 w-4 text-green-400" />, 
+        src: separatedFiles.instrumental 
+      });
+    }
+    if (separatedFiles.drums) {
+      availableTracks.push({ 
+        id: "drums", 
+        label: `Drums - ${cleanFileName(separatedFiles.original_filename)}`, 
+        icon: <Music className="h-4 w-4 text-yellow-400" />, 
+        src: separatedFiles.drums 
+      });
+    }
+    if (separatedFiles.bass) {
+      availableTracks.push({ 
+        id: "bass", 
+        label: `Bass - ${cleanFileName(separatedFiles.original_filename)}`, 
+        icon: <Music className="h-4 w-4 text-red-400" />, 
+        src: separatedFiles.bass 
+      });
+    }
+    return availableTracks;
+  }); 
+
+  const [addedTracks, setAddedTracks] = useState<Set<string>>(new Set());
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     e.dataTransfer.setData("trackIndex", index.toString());
@@ -43,9 +78,21 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
     setTracks(newTracks);
   };
 
-  const handleAddToMixer = async (track: { id: string; src: string }) => {
+  const handleAddToMixer = async (track: { id: string; src: string; label: string }) => {
     try {
-      console.log('Adding track to mixer:', { trackId: track.id, trackPath: track.src });
+      console.log('Track data:', track);
+      
+      if (!track.src) {
+        throw new Error(`No source path found for track: ${track.id}`);
+      }
+
+      const trackPath = track.src.startsWith('/') ? track.src : `/${track.src}`;
+      
+      console.log('Adding track to mixer:', { 
+        trackId: track.id, 
+        trackPath: trackPath,
+        originalFilename: cleanFileName(separatedFiles.original_filename)
+      });
       
       const response = await fetch('http://localhost:5001/api/add-to-mixer', {
         method: 'POST',
@@ -54,8 +101,8 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
         },
         body: JSON.stringify({
           trackId: track.id,
-          trackPath: track.src,
-          originalFilename: separatedFiles.original_filename
+          trackPath: trackPath,
+          originalFilename: cleanFileName(separatedFiles.original_filename)
         }),
       });
 
@@ -65,8 +112,9 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
         throw new Error(data.error || 'Failed to add track to mixer');
       }
 
-      console.log('Track added to mixer successfully:', data);
-      alert('Track added to mixer successfully!');
+      // Add track to addedTracks set
+      setAddedTracks(prev => new Set(prev).add(track.id));
+
     } catch (error: any) {
       console.error('Error adding track to mixer:', error);
       alert(`Failed to add track to mixer: ${error.message}`);
@@ -103,13 +151,25 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
               <Download className="mr-2 h-4 w-4" />
               Download
             </Button>
-            <Button 
-              className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => handleAddToMixer(track)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add to Mixer
-            </Button>
+            {addedTracks.has(track.id) ? (
+              <Button 
+                className="w-1/2 bg-green-600 hover:bg-green-700 text-white"
+                asChild
+              >
+                <Link href="/mixer">
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  Go to Mixer
+                </Link>
+              </Button>
+            ) : (
+              <Button 
+                className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => handleAddToMixer(track)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add to Mixer
+              </Button>
+            )}
           </CardFooter>
         </Card>
       ))}
