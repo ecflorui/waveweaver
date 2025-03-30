@@ -1,10 +1,13 @@
 'use client'
 import React, { useEffect, useRef, useState } from "react";
 import Multitrack from "wavesurfer-multitrack";
+import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Mic, Music, SkipForward, SkipBack } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface MixerTrack {
   id: string;
@@ -16,6 +19,17 @@ interface MixerTrack {
   endCue?: number;
 }
 
+interface Region {
+  start: number;
+  end?: number;
+  content?: string;
+  color: string;
+  drag?: boolean;
+  resize?: boolean;
+  minLength?: number;
+  maxLength?: number;
+}
+
 const MultiTrackPlayer = () => {
   const containerRef = useRef(null);
   const [multitrack, setMultitrack] = useState<Multitrack | null>(null);
@@ -23,13 +37,42 @@ const MultiTrackPlayer = () => {
   const [tracks, setTracks] = useState<MixerTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState<number>(10);
+  const [loopRegions, setLoopRegions] = useState(true);
+  const [activeRegion, setActiveRegion] = useState<any>(null);
+  const regionsRef = useRef<any>(null);
+
+  // Random color generator for regions
+  const random = (min: number, max: number) => Math.random() * (max - min) + min;
+  const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`;
 
   const fetchTracks = async () => {
     try {
       const response = await fetch('http://localhost:5001/api/mixer-tracks');
       const data = await response.json();
       console.log("Fetched tracks:", data.tracks);
-      setTracks(data.tracks);
+      
+      // Verify audio URLs are accessible
+      const verifiedTracks = await Promise.all(
+        data.tracks.map(async (track: MixerTrack) => {
+          const audioUrl = `http://localhost:5001${track.track_path}`;
+          try {
+            const response = await fetch(audioUrl, { method: 'HEAD' });
+            if (!response.ok) {
+              console.error(`Audio file not accessible: ${audioUrl}`);
+              return null;
+            }
+            return track;
+          } catch (error) {
+            console.error(`Error checking audio file: ${audioUrl}`, error);
+            return null;
+          }
+        })
+      );
+
+      // Filter out inaccessible tracks
+      const validTracks = verifiedTracks.filter((track): track is MixerTrack => track !== null);
+      console.log("Valid tracks:", validTracks);
+      setTracks(validTracks);
     } catch (error) {
       console.error('Error fetching tracks:', error);
     } finally {
@@ -41,41 +84,32 @@ const MultiTrackPlayer = () => {
     fetchTracks();
   }, []);
 
-  // Add function to update track cues
-  const updateTrackCue = (index: number, type: 'start' | 'end', value: number) => {
-    const updatedTracks = [...tracks];
-    if (type === 'start') {
-      updatedTracks[index].startCue = value;
-    } else {
-      updatedTracks[index].endCue = value;
-    }
-    setTracks(updatedTracks);
-  };
-
   useEffect(() => {
     if (!containerRef.current || tracks.length === 0) return;
 
     console.log("Creating multitrack with tracks:", tracks);
     console.log("Container ref:", containerRef.current);
 
+    // Create regions plugin
+    const regions = RegionsPlugin.create();
+    regionsRef.current = regions;
+
     const instance = Multitrack.create(
       tracks.map((track, index) => {
-        console.log(`Track ${index} URL:`, `http://localhost:5001${track.track_path}`);
+        console.log(`Initializing track ${index}:`, {
+          id: track.id,
+          url: `http://localhost:5001${track.track_path}`,
+          trackId: track.track_id
+        });
         return {
           id: index + 1,
           url: `http://localhost:5001${track.track_path}`,
-          volume: 0.95,
+          volume: 1,
           startPosition: 0,
-          draggable: true,
+          draggable: false,
           envelope: true,
           startCue: track.startCue || 0,
           endCue: track.endCue,
-          markers: [
-            { time: 5, label: 'Intro' },
-            { time: 10, label: 'M1' },
-            { time: 12, label: 'M3' },
-            { time: 15, label: 'M4' },
-          ],
           options: { 
             waveColor: track.track_id === 'vocals' ? "#FFD700" : "#00FF9D",
             progressColor: track.track_id === 'vocals' ? "#B39700" : "#00B36E",
@@ -86,7 +120,7 @@ const MultiTrackPlayer = () => {
             normalize: true,
             backend: 'WebAudio',
             mediaControls: false,
-            interact: false,
+            interact: true,
             fillParent: true,
             minPxPerSec: zoom,
             autoplay: false,
@@ -100,99 +134,157 @@ const MultiTrackPlayer = () => {
         cursorColor: "#FF0000",
         trackBackground: "#2D2D2D",
         trackBorderColor: "#3D3D3D",
-        dragBounds: true,
-        envelopeOptions: {
-          lineColor: '#FF0000',
-          lineWidth: '2',
-          dragPointSize: 8,
-          dragPointFill: '#FFFFFF',
-          dragPointStroke: '#FF0000',
-        },
-        timelineOptions: {
-          height: 20,
-          style: {
-            fontSize: '10px',
-            color: '#666'
-          },
-          timeInterval: 1,
-          primaryLabelInterval: 5,
-          secondaryLabelInterval: 1,
-          secondaryLabelOpacity: 0.25,
-          formatTimeCallback: (seconds: number) => {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = Math.floor(seconds % 60);
-            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-          }
-        }
+        dragBounds: false,
       }
     );
 
     setMultitrack(instance);
 
-    // Set up event listeners
-    instance.on('start-position-change', ({ id, startPosition }) => {
-      console.log(`Track ${id} start position updated to ${startPosition}`);
+    // Add keyboard event handler for backspace
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Backspace' && instance) {
+        // Remove all envelope points from all tracks
+        tracks.forEach((_, index) => {
+          instance.setEnvelopePoints(index + 1, []);
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Log when tracks are loaded
+    instance.once('canplay', () => {
+      console.log('All tracks are ready to play');
+      // Initialize track volumes to 1
+      tracks.forEach((_, index) => {
+        instance.setTrackVolume(index + 1, 1);
+      });
+
+      // Create start and end regions for each track
+      tracks.forEach((track, index) => {
+        // Start region
+        regions.addRegion({
+          id: `start-${index}`,
+          start: track.startCue || 0,
+          end: (track.startCue || 0) + 0.1, // Small width for the line
+          color: 'rgba(255, 0, 0, 0.5)',
+          drag: true,
+          resize: false,
+          minLength: 0.1,
+          maxLength: 0.1,
+          content: 'Start',
+        });
+
+        // End region
+        regions.addRegion({
+          id: `end-${index}`,
+          start: track.endCue || 30,
+          end: (track.endCue || 30) + 0.1, // Small width for the line
+          color: 'rgba(0, 255, 0, 0.5)',
+          drag: true,
+          resize: false,
+          minLength: 0.1,
+          maxLength: 0.1,
+          content: 'End',
+        });
+      });
     });
 
-    instance.on('volume-change', ({ id, volume }) => {
-      console.log(`Track ${id} volume updated to ${volume}`);
+    // Region event handlers
+    regions.on('region-updated', (region: any) => {
+      console.log('Updated region', region);
+      const trackIndex = parseInt(region.id.split('-')[1]);
+      const isStartRegion = region.id.startsWith('start-');
+      
+      if (isStartRegion) {
+        const updatedTracks = [...tracks];
+        updatedTracks[trackIndex] = { ...tracks[trackIndex], startCue: region.start };
+        setTracks(updatedTracks);
+      } else {
+        const updatedTracks = [...tracks];
+        updatedTracks[trackIndex] = { ...tracks[trackIndex], endCue: region.start };
+        setTracks(updatedTracks);
+      }
     });
 
-    instance.on('fade-in-change', ({ id, fadeInEnd }) => {
-      console.log(`Track ${id} fade-in updated to ${fadeInEnd}`);
+    // Remove the old region handlers since we're using the sliding window now
+    regions.on('region-in', (region: any) => {
+      console.log('region-in', region);
     });
 
-    instance.on('fade-out-change', ({ id, fadeOutStart }) => {
-      console.log(`Track ${id} fade-out updated to ${fadeOutStart}`);
+    regions.on('region-out', (region: any) => {
+      console.log('region-out', region);
     });
 
-    instance.on('start-cue-change', ({ id, startCue }) => {
-      console.log(`Track ${id} start cue updated to ${startCue}`);
-      const trackIndex = Number(id) - 1; // Convert 1-based ID to 0-based index
-      updateTrackCue(trackIndex, 'start', startCue);
-    });
-
-    instance.on('end-cue-change', ({ id, endCue }) => {
-      console.log(`Track ${id} end cue updated to ${endCue}`);
-      const trackIndex = Number(id) - 1; // Convert 1-based ID to 0-based index
-      updateTrackCue(trackIndex, 'end', endCue);
-    });
-
-    instance.once("canplay", () => {
-      console.log("Tracks are ready to play");
+    regions.on('region-clicked', (region: any, e: Event) => {
+      e.stopPropagation();
     });
 
     return () => {
+      window.removeEventListener('keydown', handleKeyDown);
       instance.destroy();
     };
-  }, [tracks, zoom]);
+  }, [tracks, zoom, loopRegions, activeRegion]);
 
   const togglePlay = () => {
     if (multitrack) {
-      if (multitrack.isPlaying()) {
-        multitrack.pause();
-        setIsPlaying(false);
-      } else {
-        multitrack.play();
-        setIsPlaying(true);
+      try {
+        if (multitrack.isPlaying()) {
+          console.log('Pausing playback');
+          multitrack.pause();
+          setIsPlaying(false);
+        } else {
+          console.log('Starting playback');
+          multitrack.play();
+          setIsPlaying(true);
+        }
+      } catch (error) {
+        console.error('Playback error:', error);
       }
+    } else {
+      console.warn('Multitrack instance not initialized');
     }
   };
 
   const forward = () => {
     if (multitrack) {
-      multitrack.setTime(multitrack.getCurrentTime() + 30);
+      try {
+        const currentTime = multitrack.getCurrentTime();
+        console.log('Current time:', currentTime);
+        multitrack.setTime(currentTime + 30);
+      } catch (error) {
+        console.error('Forward error:', error);
+      }
     }
   };
 
   const backward = () => {
     if (multitrack) {
-      multitrack.setTime(multitrack.getCurrentTime() - 30);
+      try {
+        const currentTime = multitrack.getCurrentTime();
+        console.log('Current time:', currentTime);
+        multitrack.setTime(Math.max(0, currentTime - 30));
+      } catch (error) {
+        console.error('Backward error:', error);
+      }
     }
   };
 
   const handleZoom = (value: number[]) => {
     setZoom(value[0]);
+  };
+
+  const addRegion = () => {
+    if (regionsRef.current && multitrack) {
+      const currentTime = multitrack.getCurrentTime();
+      regionsRef.current.addRegion({
+        start: currentTime,
+        end: currentTime + 5,
+        content: 'New Region',
+        color: randomColor(),
+        resize: true,
+      });
+    }
   };
 
   if (loading) {
@@ -226,19 +318,35 @@ const MultiTrackPlayer = () => {
   }
 
   return (
-    <Card className="bg-gray-800 border-gray-700 w-full">
-      <CardContent className="p-0 w-full">
-        <div className="flex flex-col w-full">
-          <div className="px-4 py-2">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-sm text-gray-400">Zoom:</span>
-              <Slider
-                value={[zoom]}
-                onValueChange={handleZoom}    
-                min={10}
-                max={100}
-                className="w-48"
-              />
+    <Card className="bg-gray-800 border-gray-700 w-full h-screen flex flex-col max-w-none">
+      <CardContent className="p-0 w-full flex flex-col flex-1 max-w-none">
+        <div className="flex flex-col w-full h-full max-w-none">
+          <div className="px-4 py-2 flex-shrink-0">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-400">Zoom:</span>
+                <Slider
+                  value={[zoom]}
+                  onValueChange={handleZoom}    
+                  min={10}
+                  max={100}
+                  className="w-48"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={loopRegions}
+                  onCheckedChange={setLoopRegions}
+                  id="loop-regions"
+                />
+                <Label htmlFor="loop-regions" className="text-sm text-gray-400">
+                  Loop Selection
+                </Label>
+              </div>
+            </div>
+            
+            <div className="text-sm text-gray-400 mb-2">
+              Tip: Drag the red line to set the start position and the green line to set the end position for each track. Double-click to create volume points. Press Backspace to remove all volume points.
             </div>
             
             {/* Track Controls */}
@@ -265,8 +373,9 @@ const MultiTrackPlayer = () => {
                         value={track.startCue || 0}
                         onChange={(e) => {
                           const value = Number(e.target.value);
-                          updateTrackCue(index, 'start', value);
-                          multitrack?.setTrackStartPosition(index, value);
+                          const updatedTracks = [...tracks];
+                          updatedTracks[index] = { ...track, startCue: value };
+                          setTracks(updatedTracks);
                         }}
                         className="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-gray-300"
                       />
@@ -280,7 +389,9 @@ const MultiTrackPlayer = () => {
                         value={track.endCue || 0}
                         onChange={(e) => {
                           const value = Number(e.target.value);
-                          updateTrackCue(index, 'end', value);
+                          const updatedTracks = [...tracks];
+                          updatedTracks[index] = { ...track, endCue: value };
+                          setTracks(updatedTracks);
                         }}
                         className="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-gray-300"
                       />
@@ -316,8 +427,15 @@ const MultiTrackPlayer = () => {
 
           <div 
             ref={containerRef} 
-            className="w-full bg-gray-900 min-h-[256px]"
-            style={{ display: 'block', minWidth: '100%' }}
+            className="flex-1 bg-gray-900"
+            style={{ 
+              display: 'block', 
+              width: '100%',
+              minWidth: '100%',
+              minHeight: '0',
+              overflow: 'hidden'
+            }}
+            onClick={() => setActiveRegion(null)}
           />
         </div>
       </CardContent>
