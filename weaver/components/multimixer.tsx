@@ -17,6 +17,7 @@ interface MixerTrack {
   created_at: string;
   startCue?: number;
   endCue?: number;
+  isLooping?: boolean;
 }
 
 interface Region {
@@ -37,7 +38,7 @@ const MultiTrackPlayer = () => {
   const [tracks, setTracks] = useState<MixerTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState<number>(10);
-  const [loopRegions, setLoopRegions] = useState(true);
+  const [loopRegions, setLoopRegions] = useState<{ [key: string]: boolean }>({});
   const [activeRegion, setActiveRegion] = useState<any>(null);
   const regionsRef = useRef<any>(null);
 
@@ -162,30 +163,41 @@ const MultiTrackPlayer = () => {
 
       // Create start and end regions for each track
       tracks.forEach((track, index) => {
-        // Start region
+        // Start region - make it more visible
         regions.addRegion({
           id: `start-${index}`,
           start: track.startCue || 0,
-          end: (track.startCue || 0) + 0.1, // Small width for the line
-          color: 'rgba(255, 0, 0, 0.5)',
+          end: (track.startCue || 0) + 0.5, // Increased width for better visibility
+          color: 'rgba(255, 0, 0, 0.8)', // Increased opacity
           drag: true,
           resize: false,
-          minLength: 0.1,
-          maxLength: 0.1,
+          minLength: 0.5,
+          maxLength: 0.5,
           content: 'Start',
         });
 
-        // End region
+        // End region - make it more visible
         regions.addRegion({
           id: `end-${index}`,
           start: track.endCue || 30,
-          end: (track.endCue || 30) + 0.1, // Small width for the line
-          color: 'rgba(0, 255, 0, 0.5)',
+          end: (track.endCue || 30) + 0.5, // Increased width for better visibility
+          color: 'rgba(0, 255, 0, 0.8)', // Increased opacity
           drag: true,
           resize: false,
-          minLength: 0.1,
-          maxLength: 0.1,
+          minLength: 0.5,
+          maxLength: 0.5,
           content: 'End',
+        });
+
+        // Loop region - make it more visible when active
+        regions.addRegion({
+          id: `loop-${index}`,
+          start: track.startCue || 0,
+          end: track.endCue || 30,
+          color: 'rgba(0, 255, 255, 0.3)', // Adjusted opacity
+          drag: false,
+          resize: true,
+          content: 'Loop',
         });
       });
     });
@@ -195,15 +207,62 @@ const MultiTrackPlayer = () => {
       console.log('Updated region', region);
       const trackIndex = parseInt(region.id.split('-')[1]);
       const isStartRegion = region.id.startsWith('start-');
+      const isEndRegion = region.id.startsWith('end-');
+      const isLoopRegion = region.id.startsWith('loop-');
       
       if (isStartRegion) {
         const updatedTracks = [...tracks];
         updatedTracks[trackIndex] = { ...tracks[trackIndex], startCue: region.start };
         setTracks(updatedTracks);
-      } else {
+        
+        // Update loop region start
+        const loopRegion = regions.getRegions().find(r => r.id === `loop-${trackIndex}`);
+        if (loopRegion) {
+          loopRegion.remove();
+          regions.addRegion({
+            ...loopRegion,
+            start: region.start,
+          });
+        }
+      } else if (isEndRegion) {
         const updatedTracks = [...tracks];
         updatedTracks[trackIndex] = { ...tracks[trackIndex], endCue: region.start };
         setTracks(updatedTracks);
+        
+        // Update loop region end
+        const loopRegion = regions.getRegions().find(r => r.id === `loop-${trackIndex}`);
+        if (loopRegion) {
+          loopRegion.remove();
+          regions.addRegion({
+            ...loopRegion,
+            end: region.start,
+          });
+        }
+      } else if (isLoopRegion) {
+        const updatedTracks = [...tracks];
+        updatedTracks[trackIndex] = { 
+          ...tracks[trackIndex], 
+          startCue: region.start,
+          endCue: region.end
+        };
+        setTracks(updatedTracks);
+      }
+    });
+
+    // Update region visibility when loop toggle changes
+    regions.on('region-clicked', (region: any, e: Event) => {
+      e.stopPropagation();
+      const trackIndex = parseInt(region.id.split('-')[1]);
+      const isLoopRegion = region.id.startsWith('loop-');
+      
+      if (isLoopRegion) {
+        const track = tracks[trackIndex];
+        if (track) {
+          const isLooping = loopRegions[track.id];
+          region.setOptions({
+            color: isLooping ? 'rgba(0, 255, 255, 0.3)' : 'rgba(0, 255, 255, 0.1)',
+          });
+        }
       }
     });
 
@@ -214,10 +273,6 @@ const MultiTrackPlayer = () => {
 
     regions.on('region-out', (region: any) => {
       console.log('region-out', region);
-    });
-
-    regions.on('region-clicked', (region: any, e: Event) => {
-      e.stopPropagation();
     });
 
     return () => {
@@ -287,6 +342,13 @@ const MultiTrackPlayer = () => {
     }
   };
 
+  const toggleLoop = (trackId: string) => {
+    setLoopRegions(prev => ({
+      ...prev,
+      [trackId]: !prev[trackId]
+    }));
+  };
+
   if (loading) {
     return (
       <Card className="bg-gray-800 border-gray-700">
@@ -333,16 +395,6 @@ const MultiTrackPlayer = () => {
                   className="w-48"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={loopRegions}
-                  onCheckedChange={setLoopRegions}
-                  id="loop-regions"
-                />
-                <Label htmlFor="loop-regions" className="text-sm text-gray-400">
-                  Loop Selection
-                </Label>
-              </div>
             </div>
             
             <div className="text-sm text-gray-400 mb-2">
@@ -362,6 +414,16 @@ const MultiTrackPlayer = () => {
                     <span className="text-sm text-gray-300">
                       {track.track_id === 'vocals' ? 'Vocals' : 'No Vocals'} - {track.original_filename}
                     </span>
+                    <div className="ml-auto flex items-center gap-2">
+                      <Switch
+                        checked={loopRegions[track.id] || false}
+                        onCheckedChange={() => toggleLoop(track.id)}
+                        id={`loop-${track.id}`}
+                      />
+                      <Label htmlFor={`loop-${track.id}`} className="text-sm text-gray-400">
+                        Loop Section
+                      </Label>
+                    </div>
                   </div>
                   <div className="flex gap-4">
                     <div className="flex items-center gap-2">
