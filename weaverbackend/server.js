@@ -22,7 +22,7 @@ const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
   database: 'waveweaver',
-  password: 'Omni5lash!', // Default password for postgres user
+  password: 'Ramanlsm&1', // Default password for postgres user
   port: 5432,
 });
 

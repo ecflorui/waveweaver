@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@radix-ui/react-progress": "^1.1.2",
+    "@radix-ui/react-slider": "^1.2.3",
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-tabs": "^1.1.3",
     "@wavesurfer/react": "^1.0.9",
@@ -22,6 +23,7 @@
     "sonner": "^2.0.2",
     "tailwind-merge": "^3.0.2",
     "tw-animate-css": "^1.2.5",
+    "wavesurfer-multitrack": "^0.4.12",
     "wavesurfer.js": "^7.9.4"
   },
   "devDependencies": {
