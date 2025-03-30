@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -17,17 +17,39 @@ interface SeparatedFiles {
 
 export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [separatedFiles, setSeparatedFiles] = useState<SeparatedFiles>({
     vocals: null,
     instrumental: null,
   });
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isProcessing) {
+      interval = setInterval(() => {
+        setProgress((prevProgress) => {
+          if (prevProgress >= 100) {
+            return 0;
+          }
+          return prevProgress + 1;
+        });
+      }, 50);
+    }
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isProcessing]);
+
   const handleProcessingStart = () => {
     setIsProcessing(true);
+    setProgress(0);
   };
 
   const handleProcessingComplete = (files?: { vocals: string; instrumental: string }) => {
     setIsProcessing(false);
+    setProgress(0);
     if (files) {
       setSeparatedFiles(files);
     }
@@ -61,7 +83,12 @@ export default function Home() {
                 <div className="absolute inset-0 animate-ping rounded-full bg-blue-400/20"></div>
               </div>
               <h3 className="text-lg font-medium text-gray-100">Processing Audio</h3>
-              <Progress value={66} className="w-full max-w-md bg-gray-700" />
+              <div className="w-full max-w-md">
+                <Progress value={progress} className="w-full bg-gray-700" />
+                <div className="flex justify-center mt-2">
+                  <span className="text-sm text-gray-400">Loading...</span>
+                </div>
+              </div>
               <p className="text-sm text-gray-400">Please wait while we separate vocals from instrumentals...</p>
             </div>
           ) : separatedFiles.vocals && separatedFiles.instrumental ? (
