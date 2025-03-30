@@ -65,50 +65,49 @@ export default function Home() {
                 <h3 className="text-lg font-medium">Your separated tracks are ready!</h3>
                 <div className="grid grid-cols-1 gap-4 w-full">
                   {separatedFiles.vocals && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Mic className="h-4 w-4" />
-                          Vocals Track
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <audio controls src={`http://localhost:5001${separatedFiles.vocals}`} className="w-full"></audio>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          className="w-full" 
-                          onClick={() => window.open(`http://localhost:5001${separatedFiles.vocals}`, '_blank')}
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          Download Vocals
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  )}
-                  
-                  {separatedFiles.instrumental && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Music className="h-4 w-4" />
-                          Instrumental Track
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <audio controls src={`http://localhost:5001${separatedFiles.instrumental}`} className="w-full"></audio>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          className="w-full"
-                          onClick={() => window.open(`http://localhost:5001${separatedFiles.instrumental}`, '_blank')}
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          Download Instrumental
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  )}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Mic className="h-4 w-4" />
+                        Vocals Track
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <audio controls src={`http://localhost:5001${separatedFiles.vocals}`} className="w-full"></audio>
+                    </CardContent>
+                    <CardFooter className="flex gap-2">
+                      <Button 
+                        className="w-full" 
+                        onClick={() => window.open(`http://localhost:5001${separatedFiles.vocals}`, '_blank')}
+                      >
+                        <Download className="mr-2 h-4 w-2" />
+                        Download Vocals
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                )}
+                {separatedFiles.instrumental && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Music className="h-4 w-4" />
+                        Instrumental Track
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <audio controls src={`http://localhost:5001${separatedFiles.instrumental}`} className="w-full"></audio>
+                    </CardContent>
+                    <CardFooter className="flex gap-2">
+                      <Button 
+                        className="w-full" 
+                        onClick={() => window.open(`http://localhost:5001${separatedFiles.instrumental}`, '_blank')}
+                      >
+                        <Download className="mr-2 h-4 w-2" />
+                        Download Instrumental
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                )}
                 </div>
                 <Button variant="outline" onClick={() => setActiveTab("upload")}>
                   Process Another File
