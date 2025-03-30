@@ -45,6 +45,13 @@ app.use('/separated', express.static('separated'));
 async function initializeDatabase() {
   const client = await pool.connect();
   try {
+    // Drop existing tables to ensure clean state
+    await client.query(`
+      DROP TABLE IF EXISTS audio_separations;
+      DROP TABLE IF EXISTS mixer_tracks;
+    `);
+
+    // Create tables with updated schema
     await client.query(`
       CREATE TABLE IF NOT EXISTS audio_separations (
         id UUID PRIMARY KEY,
@@ -58,6 +65,7 @@ async function initializeDatabase() {
         id UUID PRIMARY KEY,
         track_id TEXT NOT NULL,
         track_path TEXT NOT NULL,
+        original_filename TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -70,10 +78,10 @@ async function initializeDatabase() {
 app.post('/api/add-to-mixer', async (req, res) => {
   console.log('Received request to add track to mixer:', req.body);
   
-  const { trackId, trackPath } = req.body;
+  const { trackId, trackPath, originalFilename } = req.body;
   
-  if (!trackId || !trackPath) {
-    console.error('Missing required fields:', { trackId, trackPath });
+  if (!trackId || !trackPath || !originalFilename) {
+    console.error('Missing required fields:', { trackId, trackPath, originalFilename });
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
@@ -81,8 +89,8 @@ app.post('/api/add-to-mixer', async (req, res) => {
     const client = await pool.connect();
     try {
       const result = await client.query(
-        'INSERT INTO mixer_tracks (id, track_id, track_path) VALUES ($1, $2, $3) RETURNING *',
-        [uuidv4(), trackId, trackPath]
+        'INSERT INTO mixer_tracks (id, track_id, track_path, original_filename) VALUES ($1, $2, $3, $4) RETURNING *',
+        [uuidv4(), trackId, trackPath, originalFilename]
       );
       console.log('Successfully added track to mixer:', result.rows[0]);
       res.json({ message: 'Track added to mixer successfully', track: result.rows[0] });
@@ -199,6 +207,39 @@ app.get('/api/mixer-tracks', async (req, res) => {
   } catch (error) {
     console.error('Error fetching mixer tracks:', error);
     res.status(500).json({ error: 'Failed to fetch mixer tracks' });
+  }
+});
+
+// Endpoint for deleting all mixer tracks
+app.delete('/api/mixer-tracks', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query('DELETE FROM mixer_tracks');
+      res.json({ message: 'All tracks deleted successfully' });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error deleting tracks:', error);
+    res.status(500).json({ error: 'Failed to delete tracks' });
+  }
+});
+
+// Endpoint for deleting a single mixer track
+app.delete('/api/mixer-tracks/:id', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      const { id } = req.params;
+      await client.query('DELETE FROM mixer_tracks WHERE id = $1', [id]);
+      res.json({ message: 'Track deleted successfully' });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error deleting track:', error);
+    res.status(500).json({ error: 'Failed to delete track' });
   }
 });
 

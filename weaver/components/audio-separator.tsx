@@ -8,7 +8,7 @@ import { Upload, FileAudio } from "lucide-react"
 
 interface AudioSeparatorProps {
   onProcessingStart: () => void
-  onProcessingComplete: (files?: { vocals: string, instrumental: string }) => void
+  onProcessingComplete: (files?: { vocals: string, instrumental: string, originalFilename: string }) => void
 }
 
 export function AudioSeparator({ onProcessingStart, onProcessingComplete }: AudioSeparatorProps) {
@@ -68,7 +68,8 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
       const data = await response.json()
       onProcessingComplete({
         vocals: data.vocals,
-        instrumental: data.instrumental
+        instrumental: data.instrumental,
+        originalFilename: file.name
       })
 
     } catch (error) {

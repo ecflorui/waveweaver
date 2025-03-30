@@ -15,6 +15,7 @@ import Link from 'next/link'
 interface SeparatedFiles {
   vocals: string | null;
   instrumental: string | null;
+  originalFilename: string | null;
 }
 
 export default function Home() {
@@ -23,6 +24,7 @@ export default function Home() {
   const [separatedFiles, setSeparatedFiles] = useState<SeparatedFiles>({
     vocals: null,
     instrumental: null,
+    originalFilename: null,
   });
 
   const handleProcessingStart = () => {
@@ -30,7 +32,7 @@ export default function Home() {
     setActiveTab("process");
   };
 
-  const handleProcessingComplete = (files?: { vocals: string; instrumental: string }) => {
+  const handleProcessingComplete = (files?: { vocals: string; instrumental: string; originalFilename: string }) => {
     setIsProcessing(false);
     setActiveTab("download");
     if (files) {
@@ -47,40 +49,22 @@ export default function Home() {
           </Button>
         </Link>
       </div>
-      <Card className="w-full max-w-3xl bg-gray-800 border-gray-700">
+      <Card className="w-full max-w-2xl bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2 text-gray-100">
-            <SplitSquareVertical className="h-6 w-6 text-blue-400" />
-            Audio Separator
-          </CardTitle>
+          <CardTitle className="text-2xl text-gray-100">WaveWeaver</CardTitle>
           <CardDescription className="text-gray-400">
-            Upload an audio file and extract vocals from instrumentals
+            Separate vocals from instrumentals in your audio files
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 bg-gray-700">
-              <TabsTrigger 
-                value="upload" 
-                className="data-[state=active]:bg-gray-600 data-[state=active]:text-gray-100 text-gray-400"
-              >
-                Upload
-              </TabsTrigger>
-              <TabsTrigger 
-                value="process" 
-                className="data-[state=active]:bg-gray-600 data-[state=active]:text-gray-100 text-gray-400"
-              >
-                Process
-              </TabsTrigger>
-              <TabsTrigger 
-                value="download" 
-                className="data-[state=active]:bg-gray-600 data-[state=active]:text-gray-100 text-gray-400"
-              >
-                Download
-              </TabsTrigger>
+              <TabsTrigger value="upload" className="data-[state=active]:bg-gray-600">Upload</TabsTrigger>
+              <TabsTrigger value="process" className="data-[state=active]:bg-gray-600">Process</TabsTrigger>
+              <TabsTrigger value="download" className="data-[state=active]:bg-gray-600">Download</TabsTrigger>
             </TabsList>
             <TabsContent value="upload" className="py-4">
-              <AudioSeparator
+              <AudioSeparator 
                 onProcessingStart={handleProcessingStart}
                 onProcessingComplete={handleProcessingComplete}
               />

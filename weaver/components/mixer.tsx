@@ -2,12 +2,13 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, Music, Download } from "lucide-react";
+import { Mic, Music, Download, Trash2 } from "lucide-react";
 
 interface MixerTrack {
   id: string;
   track_id: string;
   track_path: string;
+  original_filename: string;
   created_at: string;
 }
 
@@ -38,6 +39,28 @@ export default function MixerTracks() {
     }
   };
 
+  const handleDeleteTrack = async (trackId: string) => {
+    if (!confirm('Are you sure you want to delete this track?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5001/api/mixer-tracks/${trackId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete track');
+      }
+
+      // Update the tracks list by removing the deleted track
+      setTracks(tracks.filter(track => track.id !== trackId));
+    } catch (error) {
+      console.error('Error deleting track:', error);
+      alert('Failed to delete track');
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64 text-gray-300">Loading mixer tracks...</div>;
   }
@@ -53,15 +76,25 @@ export default function MixerTracks() {
           key={track.id}
           className="hover:shadow-lg transition bg-gray-800 border-gray-700"
         >
-          <CardHeader className="pb-2 flex items-center gap-2">
-            {track.track_id === 'vocals' ? (
-              <Mic className="h-4 w-4 text-blue-400" />
-            ) : (
-              <Music className="h-4 w-4 text-green-400" />
-            )}
-            <CardTitle className="text-base text-gray-100">
-              {track.track_id === 'vocals' ? 'Vocals Track' : 'Instrumental Track'}
-            </CardTitle>
+          <CardHeader className="pb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {track.track_id === 'vocals' ? (
+                <Mic className="h-4 w-4 text-blue-400" />
+              ) : (
+                <Music className="h-4 w-4 text-green-400" />
+              )}
+              <CardTitle className="text-base text-gray-100">
+                {track.track_id === 'vocals' ? `Vocals - ${track.original_filename}` : `No Vocals - ${track.original_filename}`}
+              </CardTitle>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDeleteTrack(track.id)}
+              className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </CardHeader>
           <CardContent>
             <audio 

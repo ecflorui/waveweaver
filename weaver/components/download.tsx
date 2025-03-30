@@ -6,6 +6,7 @@ import { Mic, Music, Download, Plus } from "lucide-react";
 interface SeparatedFiles {
   vocals: string;
   instrumental: string;
+  originalFilename: string;
 }
 
 interface DraggableAudioTracksProps {
@@ -14,8 +15,18 @@ interface DraggableAudioTracksProps {
 
 export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioTracksProps) {
   const [tracks, setTracks] = useState([
-    { id: "vocals", label: "Vocals Track", icon: <Mic className="h-4 w-4 text-blue-400" />, src: separatedFiles.vocals },
-    { id: "instrumental", label: "Instrumental Track", icon: <Music className="h-4 w-4 text-green-400" />, src: separatedFiles.instrumental },
+    { 
+      id: "vocals", 
+      label: `Vocals - ${separatedFiles.originalFilename}`, 
+      icon: <Mic className="h-4 w-4 text-blue-400" />, 
+      src: separatedFiles.vocals 
+    },
+    { 
+      id: "instrumental", 
+      label: `No Vocals - ${separatedFiles.originalFilename}`, 
+      icon: <Music className="h-4 w-4 text-green-400" />, 
+      src: separatedFiles.instrumental 
+    },
   ]); 
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
@@ -44,6 +55,7 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
         body: JSON.stringify({
           trackId: track.id,
           trackPath: track.src,
+          originalFilename: separatedFiles.originalFilename
         }),
       });
 
