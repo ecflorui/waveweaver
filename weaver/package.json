@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@babel/preset-react": "^7.26.3",
     "@radix-ui/react-progress": "^1.1.2",
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-tabs": "^1.1.3",
@@ -16,10 +17,12 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.485.0",
     "next": "^15.2.4",
-    "react": "^19.0.0",
+    "react": "^19.1.0",
     "react-dom": "^19.0.0",
+    "react-waveform": "^0.1.0",
     "tailwind-merge": "^3.0.2",
-    "tw-animate-css": "^1.2.5"
+    "tw-animate-css": "^1.2.5",
+    "wavesurfer.js": "^7.9.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
