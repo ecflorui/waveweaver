@@ -72,7 +72,7 @@ app.post('/api/separate', upload.single('audioFile'), (req, res) => {
     const files = fs.readdirSync(outputDir);
     
     // Find vocals and no_vocals files
-    const vocalsFile = files.find(file => file.includes('vocals'));
+    const vocalsFile = files.find(file => file.includes('vocals') && !file.includes('no_vocals'));
     const noVocalsFile = files.find(file => file.includes('no_vocals'));
     
     if (!vocalsFile || !noVocalsFile) {
