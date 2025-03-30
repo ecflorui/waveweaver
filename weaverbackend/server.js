@@ -29,7 +29,11 @@ const pool = new Pool({
 // Set up storage for uploaded files
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    const uploadDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     cb(null, file.originalname);
@@ -39,7 +43,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Serve static files from the separated directory
-app.use('/separated', express.static('separated'));
+const separatedDir = path.join(__dirname, 'separated');
+if (!fs.existsSync(separatedDir)) {
+  fs.mkdirSync(separatedDir, { recursive: true });
+}
+app.use('/separated', express.static(separatedDir));
 
 // Initialize database tables
 async function initializeDatabase() {
@@ -58,6 +66,8 @@ async function initializeDatabase() {
         original_filename TEXT NOT NULL,
         vocals_path TEXT,
         instrumental_path TEXT,
+        drums_path TEXT,
+        bass_path TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -117,14 +127,32 @@ app.post('/api/separate', upload.single('audioFile'), async (req, res) => {
   const separationId = uuidv4();
   
   try {
+    // Parse selected stems from request
+    const selectedStems = JSON.parse(req.body.stems || '["vocals", "instrumental"]');
+    
+    // Build the Demucs command based on selected stems
+    const demucsArgs = ['-n', 'htdemucs'];
+    
+    // If only vocals and instrumental are selected, use two-stems mode
+    if (selectedStems.length === 2 && 
+        selectedStems.includes('vocals') && 
+        selectedStems.includes('instrumental')) {
+      demucsArgs.push('--two-stems', 'vocals');
+    }
+
+    // Add output directory and format flags
+    const baseFileName = path.parse(fileName).name;
+    const outputDir = path.join(separatedDir, 'htdemucs', baseFileName);
+    demucsArgs.push('--out', separatedDir);
+    demucsArgs.push('--mp3');
+
+    // Add the file path as the last argument, properly escaped
+    demucsArgs.push(`"${filePath}"`);
+
     // Run the Demucs separation script
-    const python = spawn('python', [
-      '-m', 'demucs.separate',
-      '--mp3',
-      '--two-stems', 'vocals',
-      '-n', 'mdx_extra',
-      filePath
-    ]);
+    const python = spawn('python', ['-m', 'demucs.separate', ...demucsArgs], {
+      shell: true // This will handle the quoted paths correctly
+    });
 
     let errorData = '';
     python.stderr.on('data', (data) => {
@@ -142,52 +170,116 @@ app.post('/api/separate', upload.single('audioFile'), async (req, res) => {
       });
     });
 
-    // Get paths to the separated files
-    const baseFileName = path.parse(fileName).name;
-    const outputDir = path.join(__dirname, 'separated', 'mdx_extra', baseFileName);
+    // If instrumental is selected, also run MDX Extra
+    if (selectedStems.includes('instrumental')) {
+      const mdxArgs = [
+        '-n', 'mdx_extra',
+        '--out', separatedDir,
+        '--mp3',
+        `"${filePath}"` // Properly escaped file path
+      ];
+
+      const mdxPython = spawn('python', ['-m', 'demucs.separate', ...mdxArgs], {
+        shell: true // This will handle the quoted paths correctly
+      });
+
+      let mdxErrorData = '';
+      mdxPython.stderr.on('data', (data) => {
+        mdxErrorData += data.toString();
+        console.error(`MDX Python stderr: ${data}`);
+      });
+
+      await new Promise((resolve, reject) => {
+        mdxPython.on('close', (code) => {
+          if (code !== 0) {
+            reject(new Error(`Error processing instrumental with MDX: ${mdxErrorData}`));
+          } else {
+            resolve();
+          }
+        });
+      });
+    }
     
-    // Check if the directory exists
-    if (!fs.existsSync(outputDir)) {
-      throw new Error('Output files not found');
+    // Check if the directories exist
+    const htdemucsDir = path.join(separatedDir, 'htdemucs', baseFileName);
+    const mdxDir = path.join(separatedDir, 'mdx_extra', baseFileName);
+
+    if (!fs.existsSync(htdemucsDir)) {
+      throw new Error('HTDemucs output files not found');
     }
 
-    // Get the list of files in the output directory
-    const files = fs.readdirSync(outputDir);
-    
-    // Find vocals and no_vocals files
-    const vocalsFile = files.find(file => file.includes('vocals') && !file.includes('no_vocals'));
-    const noVocalsFile = files.find(file => file.includes('no_vocals'));
-    
-    if (!vocalsFile || !noVocalsFile) {
-      throw new Error('Expected output files not found');
+    if (selectedStems.includes('instrumental') && !fs.existsSync(mdxDir)) {
+      throw new Error('MDX Extra output files not found');
     }
 
-    // Create paths for the files
-    const vocalsPath = `/separated/mdx_extra/${baseFileName}/${vocalsFile}`;
-    const instrumentalPath = `/separated/mdx_extra/${baseFileName}/${noVocalsFile}`;
+    // Get the list of files in the output directories
+    const htdemucsFiles = fs.readdirSync(htdemucsDir);
+    const mdxFiles = selectedStems.includes('instrumental') ? fs.readdirSync(mdxDir) : [];
+    
+    // Find the requested stem files
+    const stemFiles = {};
+    selectedStems.forEach(stem => {
+      if (stem === 'vocals') {
+        const file = htdemucsFiles.find(f => f.includes('vocals') && !f.includes('no_vocals'));
+        if (file) {
+          stemFiles[stem] = `/separated/htdemucs/${baseFileName}/${file}`;
+        }
+      } else if (stem === 'instrumental') {
+        // First try to find an already renamed instrumental file
+        let file = mdxFiles.find(f => f.includes('instrumental'));
+        if (!file) {
+          // If not found, look for no_vocals and rename it
+          file = mdxFiles.find(f => f.includes('no_vocals'));
+          if (file) {
+            const newFileName = file.replace('no_vocals', 'instrumental');
+            const oldPath = path.join(mdxDir, file);
+            const newPath = path.join(mdxDir, newFileName);
+            fs.renameSync(oldPath, newPath);
+            file = newFileName;
+          }
+        }
+        if (file) {
+          stemFiles[stem] = `/separated/mdx_extra/${baseFileName}/${file}`;
+        }
+      } else if (stem === 'drums' || stem === 'bass') {
+        const file = htdemucsFiles.find(f => f.includes(stem));
+        if (file) {
+          stemFiles[stem] = `/separated/htdemucs/${baseFileName}/${file}`;
+        }
+      }
+    });
 
     // Store in database
     const client = await pool.connect();
     try {
       await client.query(
-        'INSERT INTO audio_separations (id, original_filename, vocals_path, instrumental_path) VALUES ($1, $2, $3, $4)',
-        [separationId, fileName, vocalsPath, instrumentalPath]
+        'INSERT INTO audio_separations (id, original_filename, vocals_path, instrumental_path, drums_path, bass_path) VALUES ($1, $2, $3, $4, $5, $6)',
+        [separationId, fileName, stemFiles.vocals, stemFiles.instrumental, stemFiles.drums, stemFiles.bass]
       );
     } finally {
       client.release();
     }
 
     // Return the separation ID and file paths
+    console.log('Sending response with stem files:', stemFiles);
     res.json({
+      success: true,
+      status: 'completed',
       id: separationId,
-      vocals: vocalsPath,
-      instrumental: instrumentalPath,
+      vocals: stemFiles.vocals,
+      instrumental: stemFiles.instrumental,
+      drums: stemFiles.drums,
+      bass: stemFiles.bass,
       original_filename: fileName
     });
 
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      status: 'error',
+      error: error.message 
+    });
   }
 });
 
@@ -243,11 +335,6 @@ app.delete('/api/mixer-tracks/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete track' });
   }
 });
-
-// Create uploads directory if it doesn't exist
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
 
 // Initialize database and start server
 initializeDatabase().then(() => {

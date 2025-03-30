@@ -5,15 +5,17 @@ import type React from "react"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Upload, FileAudio } from "lucide-react"
+import { StemSelectionDialog } from "./stem-selection-dialog"
 
 interface AudioSeparatorProps {
   onProcessingStart: () => void
-  onProcessingComplete: (files?: { vocals: string, instrumental: string, original_filename: string }) => void
+  onProcessingComplete: (files?: { vocals: string, instrumental: string, drums: string, bass: string, original_filename: string }) => void
 }
 
 export function AudioSeparator({ onProcessingStart, onProcessingComplete }: AudioSeparatorProps) {
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [showStemDialog, setShowStemDialog] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +46,11 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
     fileInputRef.current?.click()
   }
 
-  const separateAudio = async () => {
+  const handleSeparateClick = () => {
+    setShowStemDialog(true)
+  }
+
+  const separateAudio = async (selectedStems: string[]) => {
     if (!file) return
 
     onProcessingStart()
@@ -52,6 +58,7 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
     try {
       const formData = new FormData()
       formData.append('audioFile', file)
+      formData.append('stems', JSON.stringify(selectedStems))
 
       const response = await fetch('http://localhost:5001/api/separate', {
         method: 'POST',
@@ -67,6 +74,8 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
       onProcessingComplete({
         vocals: data.vocals,
         instrumental: data.instrumental,
+        drums: data.drums,
+        bass: data.bass,
         original_filename: data.original_filename
       })
 
@@ -125,13 +134,19 @@ export function AudioSeparator({ onProcessingStart, onProcessingComplete }: Audi
             <span className="text-xs text-gray-400">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
           </div>
           <Button 
-            onClick={separateAudio} 
+            onClick={handleSeparateClick} 
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           >
-            Separate Vocals & Instrumental
+            Separate Audio
           </Button>
         </div>
       )}
+
+      <StemSelectionDialog 
+        isOpen={showStemDialog}
+        onClose={() => setShowStemDialog(false)}
+        onConfirm={separateAudio}
+      />
     </div>
   )
 }

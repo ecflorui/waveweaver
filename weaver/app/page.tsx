@@ -12,6 +12,8 @@ import Link from 'next/link'
 interface SeparatedFiles {
   vocals: string | null;
   instrumental: string | null;
+  drums: string | null;
+  bass: string | null;
   original_filename: string | null;
 }
 
@@ -20,6 +22,8 @@ export default function Home() {
   const [separatedFiles, setSeparatedFiles] = useState<SeparatedFiles>({
     vocals: null,
     instrumental: null,
+    drums: null,
+    bass: null,
     original_filename: null,
   });
 
@@ -27,7 +31,7 @@ export default function Home() {
     setIsProcessing(true);
   };
 
-  const handleProcessingComplete = (files?: { vocals: string; instrumental: string; original_filename: string }) => {
+  const handleProcessingComplete = (files?: { vocals: string; instrumental: string; drums: string; bass: string; original_filename: string }) => {
     setIsProcessing(false);
     if (files) {
       setSeparatedFiles(files);
@@ -73,7 +77,7 @@ export default function Home() {
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
               </div>
             </div>
-          ) : separatedFiles.vocals && separatedFiles.instrumental ? (
+          ) : separatedFiles.vocals || separatedFiles.instrumental || separatedFiles.drums || separatedFiles.bass ? (
             <div className="flex flex-col items-center justify-center space-y-6 py-8">
               <h3 className="text-lg font-medium text-gray-100">Your separated tracks are ready!</h3>
               <div className="grid grid-cols-1 gap-4 w-full">
@@ -81,7 +85,7 @@ export default function Home() {
               </div>
               <Button 
                 variant="outline" 
-                onClick={() => setSeparatedFiles({ vocals: null, instrumental: null, original_filename: null })}
+                onClick={() => setSeparatedFiles({ vocals: null, instrumental: null, drums: null, bass: null, original_filename: null })}
                 className="bg-gray-700 hover:bg-gray-600 text-gray-100 border-gray-600"
               >
                 Process Another File

@@ -80,11 +80,18 @@ export default function MixerTracks() {
             <div className="flex items-center gap-2">
               {track.track_id === 'vocals' ? (
                 <Mic className="h-4 w-4 text-blue-400" />
-              ) : (
+              ) : track.track_id === 'instrumental' ? (
                 <Music className="h-4 w-4 text-green-400" />
+              ) : track.track_id === 'drums' ? (
+                <Music className="h-4 w-4 text-yellow-400" />
+              ) : (
+                <Music className="h-4 w-4 text-red-400" />
               )}
               <CardTitle className="text-base text-gray-100">
-                {track.track_id === 'vocals' ? `Vocals - ${track.original_filename}` : `No Vocals - ${track.original_filename}`}
+                {track.track_id === 'vocals' ? `Vocals - ${track.original_filename}` :
+                 track.track_id === 'instrumental' ? `Instrumental - ${track.original_filename}` :
+                 track.track_id === 'drums' ? `Drums - ${track.original_filename}` :
+                 `Bass - ${track.original_filename}`}
               </CardTitle>
             </div>
             <Button
