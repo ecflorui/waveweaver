@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import MixerTracks from "@/components/mixer";
 
 export default function MixerPage() {
     return (
@@ -10,7 +11,7 @@ export default function MixerPage() {
         </Link>
       </div>
         <h1 className="text-4xl font-bold">Mixer</h1>
-        {/* Add your mixer components and content here */}
+        <MixerTracks />
       </main>
     );
   }

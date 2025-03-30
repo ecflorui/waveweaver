@@ -18,7 +18,6 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
     { id: "instrumental", label: "Instrumental Track", icon: <Music className="h-4 w-4" />, src: separatedFiles.instrumental },
   ]); 
 
-
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     e.dataTransfer.setData("trackIndex", index.toString());
   };
@@ -31,6 +30,35 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
     const [movedTrack] = newTracks.splice(dragIndex, 1);
     newTracks.splice(dropIndex, 0, movedTrack);
     setTracks(newTracks);
+  };
+
+  const handleAddToMixer = async (track: { id: string; src: string }) => {
+    try {
+      console.log('Adding track to mixer:', { trackId: track.id, trackPath: track.src });
+      
+      const response = await fetch('http://localhost:5001/api/add-to-mixer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trackId: track.id,
+          trackPath: track.src,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add track to mixer');
+      }
+
+      console.log('Track added to mixer successfully:', data);
+      alert('Track added to mixer successfully!');
+    } catch (error: any) {
+      console.error('Error adding track to mixer:', error);
+      alert(`Failed to add track to mixer: ${error.message}`);
+    }
   };
 
   return (
@@ -60,7 +88,9 @@ export default function DraggableAudioTracks({ separatedFiles }: DraggableAudioT
               Download
             </Button>
             <Button 
-              className="w-1/2 bg-blue-500 hover:bg-blue-600 text-white">
+              className="w-1/2 bg-blue-500 hover:bg-blue-600 text-white"
+              onClick={() => handleAddToMixer(track)}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add to Mixer
             </Button>
